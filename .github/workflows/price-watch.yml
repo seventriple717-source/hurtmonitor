@@ -2,15 +2,22 @@ name: Hurtigruten 价格监控
 
 on:
   schedule:
-    # 每 30 分钟跑一次（GitHub Actions 的 cron 使用 UTC 时间）
-    # 想降频省分钟数可改成每小时： "0 * * * *"
-    - cron: "*/30 * * * *"
-  workflow_dispatch: {}   # 允许在 Actions 页面手动点一下立即运行
+    # 每半小时一次，但错开 :00/:30 这两个 GitHub Actions 高峰点，
+    # 避免 schedule 事件被延迟或直接丢弃
+    - cron: "7,37 * * * *"
+  workflow_dispatch: {}
+
+# 同一时间只跑一个，避免排队积压时几个 run 挤在一起重复推送
+concurrency:
+  group: price-watch
+  cancel-in-progress: false
 
 jobs:
   watch:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      TZ: Asia/Shanghai   # 让 runner 自身的日志时间戳也是北京时间
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -19,6 +26,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: 安装依赖（Playwright + Chromium 无头浏览器）
         run: |
@@ -30,6 +38,4 @@ jobs:
         env:
           # 企业微信群机器人地址（在仓库 Secrets 里配置，不进代码）
           WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
-          # 若改用 pushplus（需实名），再加一行：
-          # PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: python hurtigruten_price_watch.py
