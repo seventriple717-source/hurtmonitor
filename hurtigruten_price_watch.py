@@ -52,7 +52,11 @@ import sys
 import time
 import json
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 日志/通知统一用北京时间(UTC+8)输出
+def beijing_now():
+    return datetime.now(timezone(timedelta(hours=8)))
 
 # ============ 你可能需要修改的配置 ============
 
@@ -187,7 +191,7 @@ def send_wechat_notification(price):
     两个都没配置时，只在终端提示，不报错。
     """
     title = "🚢 船票降价提醒"
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = beijing_now().strftime("%Y-%m-%d %H:%M:%S")
     text = (
         f"{title}\n"
         f"航线：Svolvær → Tromsø（2026-10-09 出发）\n"
@@ -258,7 +262,7 @@ def send_ntfy_notification(price):
 
 
 def log_result(price, error):
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ts = beijing_now().strftime("%Y-%m-%d %H:%M:%S")
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         if error:
             f.write(f"{ts}\t错误\t{error}\n")
@@ -267,7 +271,7 @@ def log_result(price, error):
 
 
 def check_once():
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 正在查询价格...")
+    print(f"[{beijing_now().strftime('%Y-%m-%d %H:%M:%S')}] 正在查询价格...")
     price, block, error = fetch_price()
 
     if error:
