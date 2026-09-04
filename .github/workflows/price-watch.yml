@@ -1,0 +1,35 @@
+name: Hurtigruten 价格监控
+
+on:
+  schedule:
+    # 每 30 分钟跑一次（GitHub Actions 的 cron 使用 UTC 时间）
+    # 想降频省分钟数可改成每小时： "0 * * * *"
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}   # 允许在 Actions 页面手动点一下立即运行
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖（Playwright + Chromium 无头浏览器）
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: 运行监控脚本
+        env:
+          # 企业微信群机器人地址（在仓库 Secrets 里配置，不进代码）
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+          # 若改用 pushplus（需实名），再加一行：
+          # PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: python hurtigruten_price_watch.py
